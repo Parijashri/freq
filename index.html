@@ -160,7 +160,6 @@ body {
 .land-content { position:relative; z-index:5; text-align:center; padding:0 1.8rem; width:100%; max-width:520px; }
 .return-msg { font-size:clamp(.78rem,1.8vw,.98rem); font-style:italic; font-weight:300; color:rgba(255,255,255,.3); letter-spacing:.02em; margin-bottom:.4rem; min-height:1.3em; animation:fadeUp .8s .3s both; }
 
-/* ── BRAND — smaller, contained ── */
 .brand {
   font-size: clamp(3.2rem, 11vw, 7.5rem);
   font-weight:400; font-style:italic;
@@ -269,26 +268,85 @@ body {
 .emo-scores { font-family:'JetBrains Mono',monospace; font-size:.5rem; letter-spacing:.09em; color:rgba(255,255,255,.24); animation:fadeUp .35s .08s both; }
 
 /* ════════════════════════════════════════════════
-   VINYL TURNTABLE (result screen)
+   VINYL TURNTABLE — CINEMATIC SLEEVE ANIMATION
 ════════════════════════════════════════════════ */
 .turntable-section { display:flex; flex-direction:column; align-items:center; animation:fadeUp .4s .1s both; }
-.vinyl-stage {
+
+/* Sleeve/jacket container */
+.vinyl-sleeve-wrap {
+  position:relative;
   width: min(78vw, 320px);
   height: min(78vw, 320px);
+  perspective: 800px;
+}
+
+/* The album sleeve (square jacket) */
+.v-sleeve {
+  position:absolute; inset:0;
+  border-radius:6px;
+  transform-origin: left center;
+  transform: rotateY(0deg);
+  transition: transform 1.1s cubic-bezier(.25,.46,.45,.94), opacity .8s ease;
+  z-index:8;
+  box-shadow: 4px 8px 32px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.08);
+  overflow:hidden;
+  background: #0d0a1e;
+}
+.v-sleeve.open {
+  transform: rotateY(-140deg);
+  opacity: 0;
+  pointer-events:none;
+}
+.v-sleeve-cover {
+  width:100%; height:100%; object-fit:cover;
+  display:block; opacity:0; transition:opacity .4s;
+}
+.v-sleeve-cover.show { opacity:1; }
+.v-sleeve-fallback {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.5rem;
+}
+.v-sleeve-fallback-title {
+  font-size:clamp(.75rem,2.5vw,.95rem); font-style:italic; font-weight:400;
+  color:rgba(255,255,255,.65); text-align:center; padding:0 1rem; line-height:1.4;
+}
+.v-sleeve-fallback-artist {
+  font-family:'JetBrains Mono',monospace; font-size:.5rem; letter-spacing:.16em;
+  color:rgba(255,255,255,.22); text-transform:lowercase;
+}
+/* Sleeve sheen */
+.v-sleeve::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.07) 0%,transparent 55%,rgba(0,0,0,.18) 100%);
+  pointer-events:none; z-index:2;
+}
+
+/* Vinyl stage — the platter area */
+.vinyl-stage {
+  width: 100%;
+  height: 100%;
   position:relative;
   filter: drop-shadow(0 20px 55px rgba(0,0,0,.85)) drop-shadow(0 0 30px rgba(109,40,217,.15));
 }
 
-/* Disc */
+/* Disc — starts hidden behind sleeve, slides out */
 .v-disc {
   width:100%; height:100%; border-radius:50%;
   position:relative; overflow:hidden;
   box-shadow:0 0 0 1.5px rgba(255,255,255,.05), inset 0 0 50px rgba(0,0,0,.7);
-  transition:filter .4s;
+  /* Initial state: tucked behind sleeve (90% inside, 10% peeking) */
+  transform: translateX(-45%);
+  transition: transform 1.2s cubic-bezier(.25,.46,.45,.94) .85s, filter .4s;
+  z-index:5;
 }
+.v-disc.revealed { transform: translateX(0); }
 .v-disc.spinning { animation:discSpin 4s linear infinite; }
-.v-disc.slow { animation:discSpin 4s linear infinite paused; }
+.v-disc.slow { animation:discSpinSlow 8s linear infinite; }
+.v-disc.decelerating { animation:discDecel 2s ease-out forwards; }
 @keyframes discSpin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes discSpinSlow { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes discDecel { from{animation-timing-function:ease-out;} to{transform:rotate(720deg);} }
 
 /* SVG grooves */
 .v-grooves { position:absolute; inset:0; width:100%; height:100%; border-radius:50%; }
@@ -303,6 +361,17 @@ body {
 .v-label-grad { position:absolute; inset:0; border-radius:50%; }
 .v-hole { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:5.5%; height:5.5%; border-radius:50%; background:#060514; z-index:6; box-shadow:0 0 0 2px rgba(255,255,255,.07); }
 
+/* Reflection bloom under disc */
+.v-reflection {
+  position:absolute; bottom:-12%; left:50%; transform:translateX(-50%);
+  width:70%; height:20px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(109,40,217,.18),transparent 80%);
+  filter:blur(8px);
+  opacity:0; transition:opacity 1s ease 2.2s;
+  z-index:4; pointer-events:none;
+}
+.v-reflection.show { opacity:1; }
+
 /* Tonearm */
 .v-arm {
   position:absolute; top:-2%; right:2%;
@@ -313,9 +382,19 @@ body {
   transition:transform 1.6s cubic-bezier(.25,.46,.45,.94);
 }
 .v-arm.on-record { transform:rotate(-6deg); }
+.v-arm.lifting { transform:rotate(-25deg); transition:transform .8s cubic-bezier(.55,.06,.68,.19); }
 .v-arm-pivot { position:absolute; top:0; right:0; width:14px; height:14px; border-radius:50%; background:radial-gradient(circle,rgba(210,210,210,.95),rgba(150,150,150,.75)); box-shadow:0 2px 8px rgba(0,0,0,.7); transform:translate(50%,-50%); }
 .v-arm-shaft { position:absolute; top:6px; right:6px; width:2px; height:calc(100% - 14px); background:linear-gradient(to bottom,rgba(210,210,210,.85),rgba(165,165,165,.45)); border-radius:2px; transform-origin:top center; }
 .v-arm-head { position:absolute; bottom:-3px; right:1.5px; width:11px; height:15px; background:linear-gradient(to bottom,rgba(175,175,175,.75),rgba(110,110,110,.55)); border-radius:2px 2px 4px 4px; box-shadow:0 2px 5px rgba(0,0,0,.55); }
+
+/* Frequency Hz display */
+.freq-hz-display {
+  text-align:center; margin-top:.6rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:clamp(.48rem,1.2vw,.6rem); letter-spacing:.22em;
+  color:rgba(196,167,255,.35); text-transform:lowercase;
+  animation:fadeUp .6s 2.5s both;
+}
 
 /* Song label under vinyl */
 .vinyl-song-info { text-align:center; margin-top:1.1rem; width:100%; }
@@ -443,7 +522,7 @@ input[type="range"].vol-range::-moz-range-thumb { width:11px; height:11px; borde
 .btn-wide { flex:none; width:100%; }
 
 /* ════════════════════════════════════════════════
-   LIBRARY — CD JEWEL CASES (Spotify reference)
+   FREQUENCIES TAB — JEWEL CASE LIBRARY
 ════════════════════════════════════════════════ */
 #s-history {
   justify-content:flex-start; overflow-y:auto; overflow-x:hidden;
@@ -458,67 +537,125 @@ input[type="range"].vol-range::-moz-range-thumb { width:11px; height:11px; borde
 .lib-insight { padding:.72rem 1rem; margin-bottom:.9rem; background:rgba(109,40,217,.07); border:1px solid rgba(109,40,217,.16); border-radius:9px; font-family:'JetBrains Mono',monospace; font-size:.58rem; letter-spacing:.11em; color:rgba(196,167,255,.58); text-transform:lowercase; }
 .lib-label { font-family:'JetBrains Mono',monospace; font-size:.52rem; font-weight:500; letter-spacing:.2em; color:rgba(255,255,255,.22); text-transform:uppercase; margin-bottom:.75rem; }
 
-/* GRID */
+/* GRID — 3×3 jewel case */
 .cd-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.85rem; }
 @media (min-width:500px) { .cd-grid { grid-template-columns:repeat(3,1fr); gap:1rem; } }
 @media (min-width:768px) { .cd-grid { grid-template-columns:repeat(4,1fr); } }
 @media (max-width:320px) { .cd-grid { grid-template-columns:repeat(2,1fr); } }
 
-/* JEWEL CASE */
-.cd-card { cursor:none; animation:fadeUp .35s ease both; }
-.cd-card:active .cd-case { transform:scale(.94); }
+/* JEWEL CASE — polished transparent case */
+.cd-card { cursor:none; animation:fadeUp .35s ease both; position:relative; }
+
 .cd-case {
-  aspect-ratio: 1;
-  position:relative; overflow:hidden; border-radius:4px;
-  /* Clear jewel case look */
-  background:linear-gradient(145deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.05) 45%,rgba(255,255,255,.09) 100%);
-  border:1px solid rgba(255,255,255,.12);
+  aspect-ratio:1; position:relative;
+  border-radius:3px; overflow:hidden;
+  background:linear-gradient(145deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.06) 45%,rgba(255,255,255,.1) 100%);
+  border:1px solid rgba(255,255,255,.14);
   box-shadow:
-    2px 3px 12px rgba(0,0,0,.65),
-    inset 0 1px 0 rgba(255,255,255,.16),
-    inset 0 -1px 0 rgba(0,0,0,.3);
-  transition:transform .18s, box-shadow .18s;
-  padding:8%;
+    2px 3px 14px rgba(0,0,0,.7),
+    inset 0 1px 0 rgba(255,255,255,.18),
+    inset 0 -1px 0 rgba(0,0,0,.32);
+  transition:transform .22s cubic-bezier(.25,.46,.45,.94), box-shadow .22s;
+  transform-origin:bottom center;
 }
-/* Left spine shadow */
+/* Left spine */
 .cd-case::before {
   content:''; position:absolute; left:0; top:0; bottom:0; width:9px;
-  background:linear-gradient(to right,rgba(0,0,0,.42),rgba(0,0,0,.1) 60%,transparent);
-  z-index:5;
+  background:linear-gradient(to right,rgba(0,0,0,.45),rgba(0,0,0,.1) 60%,transparent);
+  z-index:6;
 }
 /* Top sheen */
 .cd-case::after {
-  content:''; position:absolute; top:0; left:0; right:0; height:45%;
-  background:linear-gradient(to bottom,rgba(255,255,255,.08),transparent);
-  z-index:4; pointer-events:none;
+  content:''; position:absolute; top:0; left:0; right:0; height:42%;
+  background:linear-gradient(to bottom,rgba(255,255,255,.09),transparent);
+  z-index:5; pointer-events:none; border-radius:3px 3px 0 0;
 }
-.cd-case:hover { box-shadow:2px 5px 18px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.2),0 0 18px rgba(109,40,217,.12); }
+/* Hover — case opens: tilts up slightly */
+.cd-card:hover .cd-case,
+.cd-card:focus-within .cd-case {
+  transform: translateY(-6px) rotateX(3deg);
+  box-shadow:2px 8px 22px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.22),0 0 22px rgba(109,40,217,.14);
+}
 
-/* Disc inside case */
+/* The disc inside the case — peek on hover */
+.cd-disc-wrap {
+  position:absolute; inset:8%;
+  border-radius:50%; z-index:3;
+  transition:transform .28s cubic-bezier(.25,.46,.45,.94) .05s;
+}
+.cd-card:hover .cd-disc-wrap {
+  transform: translateY(-5px);
+}
 .cd-disc {
   width:100%; height:100%; border-radius:50%; overflow:hidden;
   position:relative;
   background:conic-gradient(from 0deg,var(--c1,#111120) 0deg,var(--c2,#1e1040) 55deg,#0d0d18 110deg,var(--c2,#1e1040) 170deg,var(--c1,#111120) 230deg,#0d0d18 290deg,var(--c1,#111120) 360deg);
   box-shadow:inset 0 0 24px rgba(0,0,0,.75), 0 0 0 1px rgba(255,255,255,.05);
 }
-/* Iridescent rainbow sheen */
+/* Rainbow iridescent sheen */
 .cd-disc::before {
   content:''; position:absolute; inset:0; border-radius:50%;
-  background:conic-gradient(from 0deg,rgba(255,80,80,.04),rgba(255,200,0,.04),rgba(0,255,100,.04),rgba(0,180,255,.04),rgba(150,0,255,.04),rgba(255,80,80,.04));
+  background:conic-gradient(from 0deg,rgba(255,80,80,.05),rgba(255,200,0,.05),rgba(0,255,100,.05),rgba(0,180,255,.05),rgba(150,0,255,.05),rgba(255,80,80,.05));
   mix-blend-mode:screen;
 }
 .cd-disc::after {
   content:''; position:absolute; inset:0; border-radius:50%;
-  background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.08) 0%, transparent 65%);
+  background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.09) 0%, transparent 65%);
 }
-.cd-cover-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:50%; opacity:0; mix-blend-mode:luminosity; transition:opacity .3s; display:block; }
-.cd-cover-img.loaded { opacity:.8; }
+.cd-cover-img {
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; border-radius:50%; opacity:0;
+  mix-blend-mode:luminosity; transition:opacity .35s; display:block;
+}
+.cd-cover-img.loaded { opacity:.82; }
 .cd-groove-ring { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; border:1px solid rgba(255,255,255,.04); }
 .cd-hole { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:14%; height:14%; border-radius:50%; background:#060514; box-shadow:0 0 0 3px rgba(255,255,255,.07); z-index:3; }
+
+/* Spine label on left edge */
+.cd-spine {
+  position:absolute; left:0; top:0; bottom:0; width:9px; z-index:7;
+  display:flex; align-items:center; justify-content:center; pointer-events:none;
+}
+.cd-spine-text {
+  font-family:'JetBrains Mono',monospace; font-size:.28rem; letter-spacing:.1em;
+  color:rgba(255,255,255,.22); text-transform:uppercase;
+  writing-mode:vertical-rl; text-orientation:mixed; transform:rotate(180deg);
+  white-space:nowrap; overflow:hidden; max-height:8px;
+}
+
+/* Case info tooltip on hover */
+.cd-hover-info {
+  position:absolute; inset:0; z-index:9;
+  background:rgba(4,3,12,.78); backdrop-filter:blur(6px);
+  border-radius:3px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.3rem; padding:.6rem .4rem;
+  opacity:0; transition:opacity .22s ease .1s;
+  pointer-events:none;
+}
+.cd-card:hover .cd-hover-info { opacity:1; }
+.cd-hover-emo { font-family:'JetBrains Mono',monospace; font-size:.38rem; letter-spacing:.15em; color:rgba(196,167,255,.7); text-transform:uppercase; }
+.cd-hover-atmo { font-size:.5rem; font-style:italic; color:rgba(255,255,255,.38); text-align:center; line-height:1.4; }
 
 .cd-meta { margin-top:.5rem; padding:0 .05rem; }
 .cd-name { font-size:clamp(.66rem,2.4vw,.78rem); font-style:italic; font-weight:400; color:rgba(255,255,255,.68); line-height:1.3; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .cd-emotion-label { font-family:'JetBrains Mono',monospace; font-size:.46rem; letter-spacing:.09em; color:rgba(255,255,255,.22); text-transform:lowercase; margin-top:.18rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Share/download button per card */
+.cd-card-actions {
+  display:flex; gap:.3rem; margin-top:.4rem;
+}
+.cd-action-btn {
+  flex:1; padding:.28rem .4rem; min-height:28px;
+  background:rgba(255,255,255,.016); border:1px solid rgba(255,255,255,.05);
+  border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:.38rem;
+  letter-spacing:.08em; color:rgba(255,255,255,.22); text-transform:lowercase;
+  cursor:none; transition:all .2s; text-align:center;
+}
+.cd-action-btn:hover,.cd-action-btn:active {
+  background:rgba(109,40,217,.12); border-color:rgba(109,40,217,.22);
+  color:rgba(255,255,255,.52);
+}
 
 .cd-empty { grid-column:1/-1; text-align:center; padding:3rem 1rem; font-style:italic; font-size:.95rem; color:rgba(255,255,255,.15); line-height:1.6; }
 
@@ -536,20 +673,23 @@ input[type="range"].vol-range::-moz-range-thumb { width:11px; height:11px; borde
 .guided-step { font-family:'JetBrains Mono',monospace; font-size:.54rem; letter-spacing:.2em; color:rgba(255,255,255,.13); text-transform:lowercase; }
 
 /* ════════════════════════════════════════════════
-   SAVE MODAL
+   SAVE MODAL — Enhanced share card
 ════════════════════════════════════════════════ */
 #save-modal { position:fixed; inset:0; z-index:600; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.84); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); opacity:0; pointer-events:none; transition:opacity .38s; padding:1rem; }
 #save-modal.show { opacity:1; pointer-events:all; }
-.save-inner { width:min(88vw,370px); background:#08061a; border:1px solid rgba(109,40,217,.22); border-radius:18px; padding:1.6rem; animation:revealUp .38s ease both; }
-#save-canvas { width:100%; border-radius:10px; margin-bottom:1rem; display:block; }
-.save-btns { display:flex; gap:.65rem; }
-.s-btn { flex:1; padding:.88rem; border-radius:11px; font-family:'JetBrains Mono',monospace; font-size:.58rem; font-weight:300; letter-spacing:.13em; text-transform:lowercase; cursor:none; transition:all .28s; text-align:center; min-height:46px; }
+.save-inner { width:min(88vw,380px); background:#08061a; border:1px solid rgba(109,40,217,.22); border-radius:18px; padding:1.6rem; animation:revealUp .38s ease both; }
+.save-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+.save-modal-title { font-family:'JetBrains Mono',monospace; font-size:.56rem; letter-spacing:.22em; color:rgba(255,255,255,.3); text-transform:lowercase; }
+#save-canvas { width:100%; border-radius:12px; margin-bottom:1rem; display:block; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+.save-btns { display:flex; gap:.65rem; flex-wrap:wrap; }
+.s-btn { flex:1; min-width:80px; padding:.88rem; border-radius:11px; font-family:'JetBrains Mono',monospace; font-size:.58rem; font-weight:300; letter-spacing:.13em; text-transform:lowercase; cursor:none; transition:all .28s; text-align:center; min-height:46px; }
 .s-btn.dl { background:linear-gradient(135deg,rgba(109,40,217,.42),rgba(67,56,202,.32)); border:1px solid rgba(109,40,217,.38); color:rgba(255,255,255,.78); }
+.s-btn.share-link { background:rgba(255,255,255,.028); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.45); }
 .s-btn.cancel { background:rgba(255,255,255,.018); border:1px solid rgba(255,255,255,.06); color:var(--dim); }
 .s-btn:hover,.s-btn:active { opacity:.82; }
 
 /* ════════════════════════════════════════════════
-   NAV
+   NAV — "frequencies" renamed
 ════════════════════════════════════════════════ */
 #nav {
   position:fixed; top:0; left:0; right:0; z-index:100;
@@ -580,12 +720,26 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
 .late-banner { position:fixed; top:5rem; left:50%; transform:translateX(-50%); font-style:italic; font-size:.82rem; color:rgba(255,255,255,.22); z-index:50; opacity:0; animation:lnF 4s 1s forwards; white-space:nowrap; }
 @keyframes lnF { 0%{opacity:0;} 20%{opacity:1;} 80%{opacity:1;} 100%{opacity:0;} }
 
+/* Cute welcome pill */
+.welcome-pill {
+  position:fixed; top:calc(max(var(--sat),0px) + 5.5rem); left:50%;
+  transform:translateX(-50%) translateY(-10px);
+  background:rgba(196,167,255,.08); border:1px solid rgba(196,167,255,.15);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-radius:100px; padding:.5rem 1.2rem;
+  font-family:'JetBrains Mono',monospace; font-size:.52rem; letter-spacing:.15em;
+  color:rgba(196,167,255,.55); text-transform:lowercase; z-index:50;
+  opacity:0; pointer-events:none;
+  transition:opacity .5s, transform .5s;
+  white-space:nowrap;
+}
+.welcome-pill.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
 /* ════════════════════════════════════════════════
    KEYFRAMES
 ════════════════════════════════════════════════ */
 @keyframes revealUp { from{transform:translateY(18px) scale(.97);opacity:0;} to{transform:none;opacity:1;} }
 @keyframes fadeUp { from{transform:translateY(12px);opacity:0;} to{transform:none;opacity:1;} }
-@keyframes lnFade { 0%{opacity:0;} 20%{opacity:1;} 80%{opacity:1;} 100%{opacity:0;} }
 
 /* ════════════════════════════════════════════════
    SCROLLBARS
@@ -593,11 +747,11 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
 ::-webkit-scrollbar { width:3px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:rgba(109,40,217,.26); border-radius:2px; }
 
 /* ════════════════════════════════════════════════
-   RESPONSIVE — FINAL LAYER
+   RESPONSIVE
 ════════════════════════════════════════════════ */
 @media (max-width:380px) {
   .brand { font-size:clamp(2.8rem,10.5vw,4rem); }
-  .vinyl-stage { width:min(82vw,260px); height:min(82vw,260px); }
+  .vinyl-sleeve-wrap { width:min(82vw,260px); height:min(82vw,260px); }
   #s-input .glass-box { padding:2rem 1.5rem; }
   .result-wrap { width:96vw; padding:0 .15rem 4rem; }
   .p-btn.play-btn { width:48px; height:48px; }
@@ -609,7 +763,8 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
 @media (hover:none),(pointer:coarse) {
   #cur { display:none; }
   body { cursor:auto; }
-  .login-btn,.submit-btn,.guided-opt,.p-btn,.btn-prim,.btn-sec,.nav-link,.lib-back { cursor:pointer; }
+  .login-btn,.submit-btn,.guided-opt,.p-btn,.btn-prim,.btn-sec,.nav-link,.lib-back,.cd-action-btn { cursor:pointer; }
+  .cd-card:hover .cd-hover-info { opacity:0; }
 }
 @media (prefers-reduced-motion:reduce) {
   *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
@@ -623,8 +778,10 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
 <div id="cur">♡</div>
 <canvas id="bg-canvas"></canvas>
 
-<!-- ─── VINYL DECORATIVE BACKGROUND (replaces earphone SVG) ─── -->
-<!-- Left vinyl disc -->
+<!-- Welcome pill -->
+<div class="welcome-pill" id="welcome-pill"></div>
+
+<!-- ─── VINYL DECORATIVE BACKGROUND ─── -->
 <div class="vinyl-bg-deco pos-left" id="vdeco-left">
   <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
@@ -639,12 +796,9 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
         <stop offset="0%" stop-color="rgba(255,120,120,.12)"/>
         <stop offset="60%" stop-color="transparent"/>
       </radialGradient>
-      <filter id="vg1blur"><feGaussianBlur stdDeviation="1.5"/></filter>
     </defs>
-    <!-- Main disc -->
     <circle cx="200" cy="200" r="198" fill="url(#vg1)"/>
     <circle cx="200" cy="200" r="198" fill="url(#vg1s)"/>
-    <!-- Grooves -->
     <g fill="none" stroke-linecap="round">
       <circle cx="200" cy="200" r="195" stroke="rgba(0,0,0,.4)" stroke-width="1"/>
       <circle cx="200" cy="200" r="188" stroke="rgba(0,0,0,.35)" stroke-width="1"/>
@@ -663,23 +817,18 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
       <circle cx="200" cy="200" r="84" stroke="rgba(255,255,255,.02)" stroke-width=".5"/>
       <circle cx="200" cy="200" r="76" stroke="rgba(0,0,0,.2)" stroke-width=".5"/>
     </g>
-    <!-- Label area -->
     <circle cx="200" cy="200" r="60" fill="#1a000a"/>
     <circle cx="200" cy="200" r="58" fill="rgba(100,20,40,.6)"/>
-    <!-- Label text (decorative) -->
     <text font-family="'Playfair Display',serif" font-size="9" font-style="italic" fill="rgba(255,255,255,.35)" text-anchor="middle" letter-spacing="1">
       <textPath href="#labelCirc" startOffset="10%">freq. — tune into how you feel</textPath>
     </text>
     <path id="labelCirc" d="M200,148 a52,52 0 1,1 -.1,0" fill="none"/>
-    <!-- Center hole -->
     <circle cx="200" cy="200" r="8" fill="#04030c"/>
     <circle cx="200" cy="200" r="8" stroke="rgba(255,255,255,.08)" stroke-width="1" fill="none"/>
-    <!-- Outer rim -->
     <circle cx="200" cy="200" r="197" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="1.5"/>
   </svg>
 </div>
 
-<!-- Right vinyl disc (smaller, lighter) -->
 <div class="vinyl-bg-deco pos-right" id="vdeco-right">
   <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <defs>
@@ -721,7 +870,7 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
   <div class="nav-brand">freq.</div>
   <div class="nav-links">
     <button class="nav-link" id="nav-home">home</button>
-    <button class="nav-link" id="nav-history">library</button>
+    <button class="nav-link" id="nav-history">frequencies</button>
   </div>
 </nav>
 
@@ -786,22 +935,36 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
     </div>
     <div class="emo-scores" id="r-scores"></div>
 
-    <!-- Vinyl -->
+    <!-- Vinyl with sleeve animation -->
     <div class="turntable-section">
-      <div class="vinyl-stage">
-        <div class="v-disc" id="v-disc">
-          <svg class="v-grooves" id="v-grooves" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"></svg>
-          <div class="v-label">
-            <img class="v-label-img" id="v-cover-img" src="" alt=""/>
-            <div class="v-label-grad" id="v-label-grad"></div>
+      <div class="vinyl-sleeve-wrap" id="vinyl-sleeve-wrap">
+        <!-- Sleeve / album jacket -->
+        <div class="v-sleeve" id="v-sleeve">
+          <img class="v-sleeve-cover" id="v-sleeve-cover" src="" alt=""/>
+          <div class="v-sleeve-fallback" id="v-sleeve-fallback">
+            <div class="v-sleeve-fallback-title" id="v-sleeve-fallback-title">—</div>
+            <div class="v-sleeve-fallback-artist" id="v-sleeve-fallback-artist">—</div>
           </div>
-          <div class="v-hole"></div>
         </div>
-        <div class="v-arm" id="v-arm">
-          <div class="v-arm-pivot"></div>
-          <div class="v-arm-shaft"><div class="v-arm-head"></div></div>
+        <!-- Platter with disc -->
+        <div class="vinyl-stage">
+          <div class="v-disc" id="v-disc">
+            <svg class="v-grooves" id="v-grooves" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div class="v-label">
+              <img class="v-label-img" id="v-cover-img" src="" alt=""/>
+              <div class="v-label-grad" id="v-label-grad"></div>
+            </div>
+            <div class="v-hole"></div>
+          </div>
+          <div class="v-arm" id="v-arm">
+            <div class="v-arm-pivot"></div>
+            <div class="v-arm-shaft"><div class="v-arm-head"></div></div>
+          </div>
+          <!-- Reflection bloom -->
+          <div class="v-reflection" id="v-reflection"></div>
         </div>
       </div>
+      <div class="freq-hz-display" id="freq-hz-display"></div>
       <div class="vinyl-song-info">
         <div class="v-song-title" id="r-song-title">—</div>
         <div class="v-song-artist" id="r-song-artist">—</div>
@@ -862,12 +1025,12 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
   </div>
 </section>
 
-<!-- ── LIBRARY ── -->
+<!-- ── FREQUENCIES LIBRARY ── -->
 <section class="screen" id="s-history">
   <div class="lib-wrap">
     <div class="lib-header">
-      <div class="lib-title">Your Library</div>
-      <div class="lib-sub">frequencies you've kept</div>
+      <div class="lib-title">Frequencies</div>
+      <div class="lib-sub">moments you've kept</div>
     </div>
     <div class="lib-insight" id="lib-insight" style="display:none;"></div>
     <div class="lib-label" id="lib-section-lbl">Recents</div>
@@ -888,12 +1051,16 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
 
 <div id="ack-overlay"><p id="ack-text">okay… i hear you</p></div>
 
-<!-- Save modal -->
+<!-- Save / Share modal -->
 <div id="save-modal">
   <div class="save-inner">
-    <canvas id="save-canvas" width="360" height="480"></canvas>
+    <div class="save-title-row">
+      <div class="save-modal-title">your freq. card ✦</div>
+    </div>
+    <canvas id="save-canvas" width="380" height="500"></canvas>
     <div class="save-btns">
-      <button class="s-btn dl" id="save-dl">download card</button>
+      <button class="s-btn dl" id="save-dl">download</button>
+      <button class="s-btn share-link" id="save-share-link">copy link</button>
       <button class="s-btn cancel" id="save-cancel">close</button>
     </div>
   </div>
@@ -905,59 +1072,42 @@ body::after { content:''; position:fixed; inset:0; z-index:9990; pointer-events:
 'use strict';
 /* ═══════════════════════════════════════════════════════════════
    ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  SONG SLOTS  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-   
-   HOW TO ADD YOUR SONGS:
-   
-   Step 1 — Create these folders next to freq.html:
-     /audio/    ← put .mp3 files here
-     /covers/   ← put cover images here (.jpg or .png)
-   
-   Step 2 — Fill in the paths below for each song you have.
-     Leave the string empty ('') if you haven't added it yet.
-     The player will gracefully show a hint instead of crashing.
-   
-   Example:
-     'Agar Tum Saath Ho': {
-       audio: 'audio/agar-tum-saath-ho.mp3',
-       cover: 'covers/agar-tum-saath-ho.jpg'
-     }
 
-   FILE STRUCTURE:
-   freq.html
-   ├── audio/
-   │   ├── agar-tum-saath-ho.mp3
-   │   ├── channa-mereya.mp3
-   │   └── ...
-   └── covers/
-       ├── agar-tum-saath-ho.jpg  ← square images look best
-       ├── channa-mereya.jpg
-       └── ...
+   HOW TO ADD YOUR SONGS:
+   Step 1 — Create folders: /audio/  and  /covers/
+   Step 2 — Fill paths below. Leave '' if file not added yet.
+
+   IMPORTANT: Cover images should be square (1:1 ratio).
+              .jpg works best. Use 500×500px minimum.
+
+   FREQUENCY MHz — each song gets its own dial position.
+   Format: '87.4' — shown under the vinyl while playing.
 ═══════════════════════════════════════════════════════════════ */
 const SLOTS = {
-  'Agar Tum Saath Ho':  { audio:'audio/agar-tum-saath-ho.mp3',   cover:'covers/agar-tum-saath-ho.jpg'  },
-  'Channa Mereya':      { audio:'audio/channa-mereya.mp3',        cover:'covers/channa-mereya.jpg'       },
-  'Phir Le Aaya Dil':   { audio:'audio/phir-le-aaya-dil.mp3',     cover:'covers/phir-le-aaya-dil.jpg'   },
-  'Iktara':             { audio:'audio/iktara.mp3',               cover:'covers/iktara.jpg'             },
-  'Shayad':             { audio:'audio/shayad.mp3',               cover:'covers/shayad.jpg'             },
-  'Raabta':             { audio:'audio/raabta.mp3',               cover:'covers/raabta.jpg'             },
-  'Kasoor':             { audio:'audio/kasoor.mp3',               cover:'covers/kasoor.jpg'             },
-  'Kho Gaye Hum Kahan': { audio:'audio/kho-gaye-hum-kahan.mp3',  cover:'covers/kho-gaye-hum-kahan.jpg' },
-  'Baarishein':         { audio:'audio/baarishein.mp3',           cover:'covers/baarishein.jpg'         },
-  'Ilahi':              { audio:'audio/ilahi.mp3',                cover:'covers/ilahi.jpg'              },
-  'Safarnama':          { audio:'audio/safarnama.mp3',            cover:'covers/safarnama.jpg'          },
-  'Yun Hi Chala Chal':  { audio:'audio/yun-hi-chala-chal.mp3',   cover:'covers/yun-hi-chala-chal.jpg'  },
-  'Tum Se Hi':          { audio:'audio/tum-se-hi.mp3',            cover:'covers/tum-se-hi.jpg'          },
-  'Hawayein':           { audio:'audio/hawayein.mp3',             cover:'covers/hawayein.jpg'           },
-  'Nazm Nazm':          { audio:'audio/nazm-nazm.mp3',            cover:'covers/nazm-nazm.jpg'          },
-  'Aahista':            { audio:'audio/aahista.mp3',              cover:'covers/aahista.jpg'            },
-  'Khamoshiyan':        { audio:'audio/khamoshiyan.mp3',          cover:'covers/khamoshiyan.jpg'        },
-  'Tu Kisi Rail Si':    { audio:'audio/tu-kisi-rail-si.mp3',      cover:'covers/tu-kisi-rail-si.jpg'    },
-  'Kun Faya Kun':       { audio:'audio/kun-faya-kun.mp3',         cover:'covers/kun-faya-kun.jpg'       },
-  'Nadaan Parindey':    { audio:'audio/nadaan-parindey.mp3',       cover:'covers/nadaan-parindey.jpg'    },
-  'Phir Se Ud Chala':   { audio:'audio/phir-se-ud-chala.mp3',     cover:'covers/phir-se-ud-chala.jpg'   },
-  'Love You Zindagi':   { audio:'audio/love-you-zindagi.mp3',     cover:'covers/love-you-zindagi.jpg'   },
-  'Zinda':              { audio:'audio/zinda.mp3',                cover:'covers/zinda.jpg'              },
-  'Rubaroo':            { audio:'audio/rubaroo.mp3',              cover:'covers/rubaroo.jpg'            },
+  'Agar Tum Saath Ho':  { audio:'audio/agar-tum-saath-ho.mp3',   cover:'covers/agar-tum-saath-ho.jpg',   hz:'87.4' },
+  'Channa Mereya':      { audio:'audio/channa-mereya.mp3',        cover:'covers/channa-mereya.jpg',        hz:'88.1' },
+  'Phir Le Aaya Dil':   { audio:'audio/phir-le-aaya-dil.mp3',     cover:'covers/phir-le-aaya-dil.jpg',    hz:'89.3' },
+  'Iktara':             { audio:'audio/iktara.mp3',               cover:'covers/iktara.jpg',              hz:'90.6' },
+  'Shayad':             { audio:'audio/shayad.mp3',               cover:'covers/shayad.jpg',              hz:'91.0' },
+  'Raabta':             { audio:'audio/raabta.mp3',               cover:'covers/raabta.jpg',              hz:'91.8' },
+  'Kasoor':             { audio:'audio/kasoor.mp3',               cover:'covers/kasoor.jpg',              hz:'92.3' },
+  'Kho Gaye Hum Kahan': { audio:'audio/kho-gaye-hum-kahan.mp3',  cover:'covers/kho-gaye-hum-kahan.jpg',  hz:'93.1' },
+  'Baarishein':         { audio:'audio/baarishein.mp3',           cover:'covers/baarishein.jpg',          hz:'94.2' },
+  'Ilahi':              { audio:'audio/ilahi.mp3',                cover:'covers/ilahi.jpg',               hz:'94.9' },
+  'Safarnama':          { audio:'audio/safarnama.mp3',            cover:'covers/safarnama.jpg',           hz:'95.5' },
+  'Yun Hi Chala Chal':  { audio:'audio/yun-hi-chala-chal.mp3',   cover:'covers/yun-hi-chala-chal.jpg',   hz:'96.0' },
+  'Tum Se Hi':          { audio:'audio/tum-se-hi.mp3',            cover:'covers/tum-se-hi.jpg',           hz:'96.8' },
+  'Hawayein':           { audio:'audio/hawayein.mp3',             cover:'covers/hawayein.jpg',            hz:'97.4' },
+  'Nazm Nazm':          { audio:'audio/nazm-nazm.mp3',            cover:'covers/nazm-nazm.jpg',           hz:'98.0' },
+  'Aahista':            { audio:'audio/aahista.mp3',              cover:'covers/aahista.jpg',             hz:'98.7' },
+  'Khamoshiyan':        { audio:'audio/khamoshiyan.mp3',          cover:'covers/khamoshiyan.jpg',         hz:'99.3' },
+  'Tu Kisi Rail Si':    { audio:'audio/tu-kisi-rail-si.mp3',      cover:'covers/tu-kisi-rail-si.jpg',     hz:'100.1'},
+  'Kun Faya Kun':       { audio:'audio/kun-faya-kun.mp3',         cover:'covers/kun-faya-kun.jpg',        hz:'100.8'},
+  'Nadaan Parindey':    { audio:'audio/nadaan-parindey.mp3',       cover:'covers/nadaan-parindey.jpg',    hz:'101.4'},
+  'Phir Se Ud Chala':   { audio:'audio/phir-se-ud-chala.mp3',     cover:'covers/phir-se-ud-chala.jpg',   hz:'102.0'},
+  'Love You Zindagi':   { audio:'audio/love-you-zindagi.mp3',     cover:'covers/love-you-zindagi.jpg',   hz:'102.7'},
+  'Zinda':              { audio:'audio/zinda.mp3',                cover:'covers/zinda.jpg',              hz:'103.4'},
+  'Rubaroo':            { audio:'audio/rubaroo.mp3',              cover:'covers/rubaroo.jpg',            hz:'104.0'},
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1007,6 +1157,7 @@ const SONGS = {
 };
 
 const EMO_LABELS = {miss_someone:'MISSING SOMEONE',unsaid:'UNSAID',overthinking:'OVERTHINKING',healing:'HEALING',comfort_love:'COMFORT / LOVE',late_night:'LATE NIGHT',numb:'NUMB',becoming_okay:'BECOMING OKAY'};
+const EMO_ATMO = {miss_someone:'aching',unsaid:'unspoken',overthinking:'spiraling',healing:'slowly lighter',comfort_love:'safe',late_night:'3am honest',numb:'suspended',becoming_okay:'emerging'};
 const EMO_MAP = {
   miss_someone:['miss','missed','missing','yaad','without you','absence','gone','left','they left','he left','she left','thinking about them','can\'t stop thinking'],
   unsaid:['unsaid','couldn\'t say','never told','one sided','unrequited','crush','like them','like her','like him','wanted to say','shayad','kash'],
@@ -1035,6 +1186,7 @@ const HIST_COLORS=['#7c3aed','#0ea5e9','#10b981','#f59e0b','#ef4444','#ec4899','
 const SK='freq_intro4',HK='freq_hist_v5',NK='freq_name',VK='freq_visits',LVK='freq_lv';
 let screen=null,curResult=null,lastSongs=[],gAnswers=[],gStep=0;
 let bgH1=265,bgH2=235,bgT1=265,bgT2=235,tabActive=true;
+let vinylSequenceTimeout=null;
 
 const sg=(k,d)=>{try{const r=localStorage.getItem(k);return r!==null?JSON.parse(r):d;}catch{return d;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
@@ -1063,19 +1215,42 @@ function loadAudio(title){
   if(audio.src!==url){audio.src=slot.audio;audio.load();}
   return true;
 }
-function setVinylCover(title){
-  const img=document.getElementById('v-cover-img');
-  const grad=document.getElementById('v-label-grad');
+
+/* Sleeve + disc cover */
+function setVinylVisuals(title){
   const slot=SLOTS[title];
+  const sleeveImg=document.getElementById('v-sleeve-cover');
+  const fallbackTitle=document.getElementById('v-sleeve-fallback-title');
+  const fallbackArtist=document.getElementById('v-sleeve-fallback-artist');
+  const labelImg=document.getElementById('v-cover-img');
+  const labelGrad=document.getElementById('v-label-grad');
+
+  // Sleeve
   if(slot&&slot.cover){
-    img.onload=()=>img.classList.add('show');
-    img.onerror=()=>{img.classList.remove('show');grad.style.display='block';};
-    img.classList.remove('show');
-    img.style.display='block';
-    img.src=slot.cover;
-    grad.style.display='none';
-  }else{img.classList.remove('show');img.style.display='none';grad.style.display='block';}
+    sleeveImg.onload=()=>{ sleeveImg.classList.add('show'); document.getElementById('v-sleeve-fallback').style.display='none'; };
+    sleeveImg.onerror=()=>{ sleeveImg.classList.remove('show'); document.getElementById('v-sleeve-fallback').style.display='flex'; };
+    sleeveImg.classList.remove('show');
+    sleeveImg.src=slot.cover;
+    // Label (small center image)
+    labelImg.onload=()=>labelImg.classList.add('show');
+    labelImg.onerror=()=>{ labelImg.classList.remove('show'); };
+    labelImg.classList.remove('show');
+    labelImg.style.display='block';
+    labelImg.src=slot.cover;
+    labelGrad.style.display='none';
+  } else {
+    sleeveImg.classList.remove('show');
+    document.getElementById('v-sleeve-fallback').style.display='flex';
+    labelImg.classList.remove('show');
+    labelImg.style.display='none';
+    labelGrad.style.display='block';
+  }
+  const song=SONGS[curResult?.emo||'late_night']?.find(s=>s.title===title);
+  fallbackTitle.textContent=title;
+  const artist=SLOTS[title]?song?.artist||'—':'—';
+  fallbackArtist.textContent=artist;
 }
+
 const fmt=s=>{if(!s||isNaN(s))return'0:00';const m=Math.floor(s/60),sc=Math.floor(s%60);return`${m}:${sc.toString().padStart(2,'0')}`;};
 const updTot=d=>{ document.getElementById('p-tot').textContent=fmt(d); };
 const updCur=()=>{if(!audio.duration)return;document.getElementById('p-fill').style.width=(audio.currentTime/audio.duration*100)+'%';document.getElementById('p-cur').textContent=fmt(audio.currentTime);};
@@ -1089,8 +1264,8 @@ audio.addEventListener('loadedmetadata',()=>updTot(audio.duration));
 audio.addEventListener('timeupdate',updCur);
 audio.addEventListener('play',()=>{playing=true;updPlayUI();discSpin(true);armDown(true);});
 audio.addEventListener('pause',()=>{playing=false;updPlayUI();discSpin(false);});
-audio.addEventListener('ended',()=>{playing=false;updPlayUI();discStop();armDown(false);});
-audio.addEventListener('error',()=>{playing=false;updPlayUI();discStop();armDown(false);document.getElementById('no-audio-hint').style.display='block';});
+audio.addEventListener('ended',()=>{playing=false;updPlayUI();discStop();armLift();});
+audio.addEventListener('error',()=>{playing=false;updPlayUI();discStop();armLift();document.getElementById('no-audio-hint').style.display='block';});
 
 function togglePlay(){
   unlockAudio();
@@ -1119,8 +1294,51 @@ function updVolIcon(){const v=audio.volume;document.getElementById('btn-mute').t
 document.getElementById('btn-mute').addEventListener('click',()=>{audio.muted=!audio.muted;updVolIcon();});
 
 /* ═══════════════════════════════════════════════════════════════
-   VINYL TURNTABLE
+   VINYL CINEMATIC SEQUENCE
+   1. Sleeve glows → opens (rotateY)
+   2. Disc slides out from behind sleeve
+   3. Disc is now on platter, arm lowers
+   4. Reflection bloom appears
 ═══════════════════════════════════════════════════════════════ */
+function runVinylSequence(){
+  if(vinylSequenceTimeout)clearTimeout(vinylSequenceTimeout);
+  const sleeve=document.getElementById('v-sleeve');
+  const disc=document.getElementById('v-disc');
+  const arm=document.getElementById('v-arm');
+  const reflection=document.getElementById('v-reflection');
+
+  // Reset state
+  sleeve.classList.remove('open');
+  disc.classList.remove('revealed','spinning','slow','decelerating');
+  arm.classList.remove('on-record','lifting');
+  reflection.classList.remove('show');
+  disc.style.animation='none';
+  disc.style.transform='translateX(-45%)';
+
+  // T=0: sleeve visible, disc hidden behind
+  // T=700ms: sleeve glows and opens
+  vinylSequenceTimeout=setTimeout(()=>{
+    sleeve.style.boxShadow='4px 8px 32px rgba(0,0,0,.85),0 0 24px rgba(196,167,255,.12),inset 0 1px 0 rgba(255,255,255,.1)';
+    setTimeout(()=>{
+      // Sleeve opens
+      sleeve.classList.add('open');
+      // T=1.6s: disc slides out onto platter
+      setTimeout(()=>{
+        disc.style.transform='';
+        disc.classList.add('revealed');
+        // T=2.4s: arm lowers (needle drops)
+        setTimeout(()=>{
+          arm.classList.add('on-record');
+          // T=3.2s: reflection bloom
+          setTimeout(()=>{
+            reflection.classList.add('show');
+          },800);
+        },800);
+      },850);
+    },250);
+  },400);
+}
+
 function buildGrooves(){
   const svg=document.getElementById('v-grooves'); svg.innerHTML='';
   const ns='http://www.w3.org/2000/svg';
@@ -1137,6 +1355,7 @@ function buildGrooves(){
   rim.setAttribute('fill','none');rim.setAttribute('stroke','rgba(255,255,255,.05)');rim.setAttribute('stroke-width','2');
   svg.appendChild(rim);
 }
+
 function setDiscColors(song){
   const d=document.getElementById('v-disc');
   const g=document.getElementById('v-label-grad');
@@ -1144,14 +1363,38 @@ function setDiscColors(song){
   d.style.background=`conic-gradient(from 0deg,${c[0]} 0deg,${c[1]} 90deg,#0a0a12 180deg,${c[1]} 270deg,${c[0]} 360deg)`;
   g.style.background=`radial-gradient(circle at 40% 38%,${c[1]},${c[2]},${c[0]})`;
 }
-const discSpin=on=>{const d=document.getElementById('v-disc');d.classList.toggle('spinning',on);d.classList.toggle('slow',false);};
-const discStop=()=>{const d=document.getElementById('v-disc');d.classList.remove('spinning','slow');};
-const armDown=on=>{const a=document.getElementById('v-arm');if(a)a.classList.toggle('on-record',on);};
+
+const discSpin=on=>{
+  const d=document.getElementById('v-disc');
+  if(on){
+    d.style.animation='';
+    d.classList.add('spinning');
+    d.classList.remove('slow','decelerating');
+  } else {
+    d.classList.remove('spinning');
+    d.classList.add('slow');
+    setTimeout(()=>{ d.classList.remove('slow'); },2000);
+  }
+};
+const discStop=()=>{
+  const d=document.getElementById('v-disc');
+  d.classList.remove('spinning','slow','decelerating');
+  d.style.animation='none';
+};
+const armDown=on=>{ const a=document.getElementById('v-arm');if(a){a.classList.toggle('on-record',on);a.classList.remove('lifting');} };
+const armLift=()=>{
+  const a=document.getElementById('v-arm');
+  if(a){
+    a.classList.remove('on-record');
+    a.classList.add('lifting');
+    setTimeout(()=>a.classList.remove('lifting'),900);
+  }
+};
 
 /* ═══════════════════════════════════════════════════════════════
    CANVAS / PARTICLES
 ═══════════════════════════════════════════════════════════════ */
-const cv=document.getElementById('bg-canvas'),cx=cv.getContext('2d');
+const cv=document.getElementById('bg-canvas'),cx2=cv.getContext('2d');
 let W,H,parts=[];
 let tParts=40;
 function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
@@ -1159,21 +1402,21 @@ class P{
   constructor(init=false){this.r();if(init)this.y=Math.random()*H;}
   r(){this.x=Math.random()*W;this.y=H+8;this.sz=Math.random()*1.4+.2;this.sy=Math.random()*.25+.06;this.sx=(Math.random()-.5)*.1;this.op=Math.random()*.28+.05;this.h=Math.random()>.5?258+Math.random()*35:195+Math.random()*28;}
   u(){this.y-=this.sy;this.x+=this.sx;if(this.y<-5)this.r();}
-  d(){cx.beginPath();cx.arc(this.x,this.y,this.sz,0,Math.PI*2);cx.fillStyle=`hsla(${this.h},68%,70%,${this.op})`;cx.fill();}
+  d(){cx2.beginPath();cx2.arc(this.x,this.y,this.sz,0,Math.PI*2);cx2.fillStyle=`hsla(${this.h},68%,70%,${this.op})`;cx2.fill();}
 }
 function initP(){parts=Array.from({length:tParts},()=>new P(true));}
 function animCanvas(){
   if(!tabActive){requestAnimationFrame(animCanvas);return;}
   bgH1+=(bgT1-bgH1)*.01; bgH2+=(bgT2-bgH2)*.01;
-  cx.clearRect(0,0,W,H);
-  const g=cx.createRadialGradient(W*.5,H*.42,0,W*.5,H*.42,W*.72);
+  cx2.clearRect(0,0,W,H);
+  const g=cx2.createRadialGradient(W*.5,H*.42,0,W*.5,H*.42,W*.72);
   g.addColorStop(0,`hsla(${bgH1},52%,6%,.65)`);
   g.addColorStop(.5,`hsla(${bgH2},42%,3%,.45)`);
   g.addColorStop(1,'hsla(240,22%,2%,.92)');
-  cx.fillStyle=g; cx.fillRect(0,0,W,H);
-  cx.strokeStyle='rgba(109,40,217,.016)'; cx.lineWidth=1;
-  for(let x=0;x<W;x+=100){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
-  for(let y=0;y<H;y+=100){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+  cx2.fillStyle=g; cx2.fillRect(0,0,W,H);
+  cx2.strokeStyle='rgba(109,40,217,.016)'; cx2.lineWidth=1;
+  for(let x=0;x<W;x+=100){cx2.beginPath();cx2.moveTo(x,0);cx2.lineTo(x,H);cx2.stroke();}
+  for(let y=0;y<H;y+=100){cx2.beginPath();cx2.moveTo(0,y);cx2.lineTo(W,y);cx2.stroke();}
   parts.forEach(p=>{p.u();p.d();});
   requestAnimationFrame(animCanvas);
 }
@@ -1189,10 +1432,10 @@ const applyTheme=e=>{const t=THEMES[e]||THEMES.late_night;bgT1=t.h1;bgT2=t.h2;};
 ═══════════════════════════════════════════════════════════════ */
 const isMobile=('ontouchstart' in window)||window.matchMedia('(pointer:coarse)').matches;
 const curEl=document.getElementById('cur');
-let mx=window.innerWidth/2,my=window.innerHeight/2,cx2=mx,cy2=my;
+let mx=window.innerWidth/2,my=window.innerHeight/2,curX=mx,curY=my;
 if(!isMobile){
   document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
-  (function anim(){cx2+=(mx-cx2)*.3;cy2+=(my-cy2)*.3;curEl.style.left=cx2+'px';curEl.style.top=cy2+'px';requestAnimationFrame(anim);})();
+  (function anim(){curX+=(mx-curX)*.3;curY+=(my-curY)*.3;curEl.style.left=curX+'px';curEl.style.top=curY+'px';requestAnimationFrame(anim);})();
   document.addEventListener('mouseenter',e=>{if(['BUTTON','A','TEXTAREA','INPUT'].includes(e.target.tagName))curEl.classList.add('hover');},true);
   document.addEventListener('mouseleave',e=>{if(['BUTTON','A','TEXTAREA','INPUT'].includes(e.target.tagName))curEl.classList.remove('hover');},true);
   document.addEventListener('click',e=>{
@@ -1216,6 +1459,25 @@ function spawnF(){
 setInterval(spawnF,4000);for(let i=0;i<4;i++)setTimeout(spawnF,i*900);
 
 /* ═══════════════════════════════════════════════════════════════
+   WELCOME PILL — personalized greeting
+═══════════════════════════════════════════════════════════════ */
+function showWelcomePill(){
+  const name=gn(); if(!name)return;
+  const h=new Date().getHours();
+  const greets=[
+    h<5?`still up, ${name}?`
+    :h<12?`good morning, ${name} ♡`
+    :h<17?`hey ${name} ✦`
+    :h<21?`evening, ${name}`
+    :`late again, ${name}?`
+  ];
+  const pill=document.getElementById('welcome-pill');
+  pill.textContent=greets[0];
+  pill.classList.add('show');
+  setTimeout(()=>pill.classList.remove('show'),3200);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    SCREEN MANAGER
 ═══════════════════════════════════════════════════════════════ */
 function showScreen(id){
@@ -1223,17 +1485,13 @@ function showScreen(id){
   document.getElementById(id).classList.add('active');
   screen=id;
   document.getElementById('nav').classList.toggle('visible',id!=='s-land'&&id!=='s-login');
-  // Vinyl bg deco: show only on landing/input
   const showDeco=id==='s-land'||id==='s-input';
   document.getElementById('vdeco-left').classList.toggle('visible',showDeco);
   document.getElementById('vdeco-right').classList.toggle('visible',showDeco);
-  // Particles
   tParts=id==='s-result'?10:id==='s-history'?18:38;
   initP();
-  // Pause audio if leaving result
   if(id!=='s-result'&&playing){audio.pause();}
-  if(id!=='s-result'){discStop();armDown(false);}
-  // Scroll to top
+  if(id!=='s-result'){discStop();armLift();}
   if(id==='s-result'){const w=document.getElementById('result-wrap');if(w)w.parentElement.scrollTop=0;}
   if(id==='s-history'){const w=document.querySelector('.lib-wrap');if(w){const p=w.parentElement;if(p)p.scrollTop=0;}}
 }
@@ -1280,29 +1538,13 @@ function getBestSong(emo){
   return pick;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   AI INTERPRETATION
-═══════════════════════════════════════════════════════════════ */
-async function fetchAI(input,emo,song){
-  const p=`You are the emotional core of "freq." — a minimal interface mapping feelings to music.
-
-User wrote: "${input}"
-Emotion: ${emo}
-Song: ${song.title} by ${song.artist}
-
-Generate:
-1. interpretation: 1-2 lines, lowercase, poetic, emotionally precise. Internal feeling.
-2. wycs: 1-2 lines, lowercase, direct, personal, vulnerable. What they could've said to someone.
-
-Rules: max 10 words per line. No quotation marks. Screenshot-ready.
-
-Respond ONLY with JSON, no markdown:
-{"interpretation":"line\\nline","wycs":"line\\nline"}`;
-  try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,messages:[{role:'user',content:p}]})});
-    const d=await r.json();
-    return JSON.parse((d.content?.[0]?.text||'').replace(/```json|```/g,'').trim());
-  }catch{return{interpretation:song.interp,wycs:song.wycs};}
+/* Hz display */
+function generateHz(title){
+  const slot=SLOTS[title];
+  if(slot&&slot.hz)return slot.hz+' MHz';
+  // fallback: deterministic from title chars
+  let n=0;for(const c of title)n+=c.charCodeAt(0);
+  return(87+(n%170)/10).toFixed(1)+' MHz';
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1313,20 +1555,32 @@ const PROC_MSGS=['reading between the lines…','tuning your frequency…','feel
 async function showResult(emo,song,input,eData){
   // Reset player
   if(playing)audio.pause();
-  discStop();armDown(false);playing=false;updPlayUI();
+  discStop();armLift();playing=false;updPlayUI();
   document.getElementById('p-fill').style.width='0%';
   document.getElementById('p-cur').textContent='0:00';
 
-  // Emotion
+  // Reset vinyl sleeve
+  const sleeve=document.getElementById('v-sleeve');
+  sleeve.classList.remove('open');
+  sleeve.style.boxShadow='';
+  document.getElementById('v-disc').classList.remove('revealed','spinning','slow');
+  document.getElementById('v-disc').style.transform='translateX(-45%)';
+  document.getElementById('v-disc').style.animation='none';
+  document.getElementById('v-reflection').classList.remove('show');
+
+  // Emotion header
   const now=new Date();
   document.getElementById('r-emo-tag').textContent=`✦ ${EMO_LABELS[emo]||emo}`;
   document.getElementById('r-time').textContent=`${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
   document.getElementById('r-scores').textContent=eData&&eData.secondary?`${eData.primaryPct}% ${(EMO_LABELS[emo]||emo).toLowerCase()} • ${eData.secondaryPct}% ${(EMO_LABELS[eData.secondary]||eData.secondary).toLowerCase()}`:'';
 
-  // Vinyl
+  // Hz display
+  document.getElementById('freq-hz-display').textContent=generateHz(song.title);
+
+  // Vinyl visuals
   buildGrooves();
   setDiscColors(song);
-  setVinylCover(song.title);
+  setVinylVisuals(song.title);
 
   // Song info
   document.getElementById('r-song-title').textContent=song.title;
@@ -1335,7 +1589,7 @@ async function showResult(emo,song,input,eData){
   // Audio
   loadAudio(song.title);
 
-  // Loading text
+  // Text loading
   const ld='<div class="dot-load"><div class="dl"></div><div class="dl"></div><div class="dl"></div></div>';
   document.getElementById('r-interp').innerHTML=ld;
   document.getElementById('r-wycs').innerHTML=ld;
@@ -1349,11 +1603,17 @@ async function showResult(emo,song,input,eData){
   curResult={emo,song,input,eData,time:Date.now()};
   showScreen('s-result');
 
-  // AI
-  const ai=await fetchAI(input,emo,song);
-  document.getElementById('r-interp').textContent=ai.interpretation||song.interp;
-  document.getElementById('r-wycs').textContent=ai.wycs||song.wycs;
-  if(curResult)curResult.ai=ai;
+  // Run the cinematic vinyl sequence after screen appears
+  setTimeout(()=>runVinylSequence(), 350);
+
+  // Fallback text
+  setTimeout(()=>{
+    if(document.getElementById('r-interp').querySelector('.dot-load')){
+      document.getElementById('r-interp').textContent=song.interp;
+      document.getElementById('r-wycs').textContent=song.wycs;
+    }
+    if(curResult)curResult.ai={interpretation:song.interp,wycs:song.wycs};
+  },2000);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1378,38 +1638,160 @@ function process(text){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SAVE CARD
+   SAVE CARD — beautiful, shareable
 ═══════════════════════════════════════════════════════════════ */
 function drawCard(){
   const cv2=document.getElementById('save-canvas'),c2=cv2.getContext('2d');
-  const CW=360,CH=480; cv2.width=CW; cv2.height=CH;
-  c2.fillStyle='#07051a'; c2.fillRect(0,0,CW,CH);
-  const tg=c2.createLinearGradient(0,0,CW,CH/2.2); tg.addColorStop(0,'rgba(109,40,217,.2)'); tg.addColorStop(1,'transparent');
-  c2.fillStyle=tg; c2.fillRect(0,0,CW,CH);
-  c2.font='italic 300 1.9rem Playfair Display,serif'; c2.fillStyle='rgba(196,167,255,.86)'; c2.fillText('freq.',26,50);
-  c2.strokeStyle='rgba(109,40,217,.28)'; c2.lineWidth=1; c2.beginPath(); c2.moveTo(26,64); c2.lineTo(CW-26,64); c2.stroke();
+  const CW=380,CH=500; cv2.width=CW; cv2.height=CH;
+
+  // Deep dark background
+  c2.fillStyle='#06041a'; c2.fillRect(0,0,CW,CH);
+
+  // Subtle gradient layer
+  const bg1=c2.createLinearGradient(0,0,CW,CH*.6);
+  bg1.addColorStop(0,'rgba(109,40,217,.16)');
+  bg1.addColorStop(.5,'rgba(67,56,202,.06)');
+  bg1.addColorStop(1,'transparent');
+  c2.fillStyle=bg1; c2.fillRect(0,0,CW,CH);
+
+  // Bottom right glow
+  const bg2=c2.createRadialGradient(CW,CH,0,CW,CH,200);
+  bg2.addColorStop(0,'rgba(14,165,233,.08)');
+  bg2.addColorStop(1,'transparent');
+  c2.fillStyle=bg2; c2.fillRect(0,0,CW,CH);
+
+  // Scan line texture
+  for(let y=0;y<CH;y+=4){
+    c2.fillStyle='rgba(0,0,0,.028)';
+    c2.fillRect(0,y,CW,2);
+  }
+
+  // Border
+  c2.strokeStyle='rgba(196,167,255,.1)';
+  c2.lineWidth=1;
+  c2.beginPath(); c2.roundRect(1,1,CW-2,CH-2,14); c2.stroke();
+
+  // Top line accent
+  const tl=c2.createLinearGradient(0,0,CW,0);
+  tl.addColorStop(0,'transparent');
+  tl.addColorStop(.3,'rgba(196,167,255,.4)');
+  tl.addColorStop(.7,'rgba(196,167,255,.4)');
+  tl.addColorStop(1,'transparent');
+  c2.strokeStyle=tl; c2.lineWidth=1.5;
+  c2.beginPath(); c2.moveTo(0,0); c2.lineTo(CW,0); c2.stroke();
+
   if(!curResult)return;
   const{emo,song,ai}=curResult;
-  c2.font='400 .48rem JetBrains Mono,monospace'; c2.fillStyle='rgba(196,167,255,.52)';
-  c2.fillText((EMO_LABELS[emo]||emo).toUpperCase()+' • '+new Date(curResult.time).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}),26,90);
-  const it=ai?.interpretation||song.interp||'';
-  c2.font='italic 300 .98rem Playfair Display,serif'; c2.fillStyle='rgba(255,255,255,.5)';
-  it.split('\n').forEach((l,i)=>c2.fillText(l,26,144+i*26));
-  const wt=ai?.wycs||song.wycs||'';
-  const wy=it.split('\n').length>1?225:210;
-  c2.font='italic 400 1.1rem Playfair Display,serif'; c2.fillStyle='rgba(255,255,255,.76)';
-  wt.split('\n').forEach((l,i)=>c2.fillText(l,26,wy+i*30));
-  const by=CH-108;
-  c2.strokeStyle='rgba(255,255,255,.06)'; c2.lineWidth=1; c2.beginPath(); c2.moveTo(26,by); c2.lineTo(CW-26,by); c2.stroke();
-  c2.font='300 .56rem JetBrains Mono,monospace'; c2.fillStyle='rgba(255,255,255,.3)'; c2.fillText('♪ '+song.title,26,by+22);
-  c2.font='300 .5rem JetBrains Mono,monospace'; c2.fillStyle='rgba(255,255,255,.17)'; c2.fillText(song.artist,26,by+42);
-  c2.font='300 .44rem JetBrains Mono,monospace'; c2.fillStyle='rgba(255,255,255,.08)'; c2.fillText('freq. — tune into how you feel',26,CH-20);
-  const bg2=c2.createRadialGradient(CW,CH,0,CW,CH,190); bg2.addColorStop(0,'rgba(109,40,217,.12)'); bg2.addColorStop(1,'transparent');
-  c2.fillStyle=bg2; c2.fillRect(0,0,CW,CH);
+  const slot=SLOTS[song.title];
+
+  // Cover art if available
+  if(slot&&slot.cover){
+    const img=new Image();
+    img.onload=()=>{
+      // Draw mini vinyl-style cover circle
+      c2.save();
+      c2.beginPath(); c2.arc(CW-62,55,38,0,Math.PI*2);
+      c2.clip();
+      c2.drawImage(img,CW-100,17,76,76);
+      c2.restore();
+      // Vinyl hole
+      c2.beginPath(); c2.arc(CW-62,55,5,0,Math.PI*2);
+      c2.fillStyle='#06041a'; c2.fill();
+      c2.strokeStyle='rgba(255,255,255,.1)'; c2.lineWidth=1; c2.stroke();
+    };
+    img.src=slot.cover;
+  }
+
+  // freq. wordmark
+  c2.font='italic 300 2rem Playfair Display,serif';
+  c2.fillStyle='rgba(196,167,255,.9)';
+  c2.fillText('freq.',26,52);
+
+  // Hz tag
+  const hz=generateHz(song.title);
+  c2.font='300 .42rem JetBrains Mono,monospace';
+  c2.fillStyle='rgba(196,167,255,.35)';
+  c2.fillText(hz,28,70);
+
+  // Divider
+  const div1=c2.createLinearGradient(0,0,CW,0);
+  div1.addColorStop(0,'rgba(109,40,217,.35)');
+  div1.addColorStop(1,'transparent');
+  c2.strokeStyle=div1; c2.lineWidth=1;
+  c2.beginPath(); c2.moveTo(26,82); c2.lineTo(CW-26,82); c2.stroke();
+
+  // Emotion label
+  c2.font='500 .45rem JetBrains Mono,monospace';
+  c2.fillStyle='rgba(196,167,255,.5)';
+  c2.fillText((EMO_LABELS[emo]||emo).toUpperCase(),26,104);
+
+  // Time
+  const timeStr=new Date(curResult.time).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'});
+  c2.fillStyle='rgba(255,255,255,.15)';
+  c2.font='300 .4rem JetBrains Mono,monospace';
+  c2.fillText(timeStr,CW-26-(c2.measureText(timeStr).width),104);
+
+  // "what this feels like"
+  c2.font='300 .38rem JetBrains Mono,monospace';
+  c2.fillStyle='rgba(255,255,255,.18)';
+  c2.fillText('what this feels like',26,136);
+
+  const interp=(ai?.interpretation||song.interp||'').split('\n');
+  c2.font='italic 300 .95rem Playfair Display,serif';
+  c2.fillStyle='rgba(255,255,255,.48)';
+  interp.forEach((l,i)=>c2.fillText(l,26,160+i*24));
+
+  // "what you could've said"
+  const wStart=interp.length>1?216:202;
+  c2.font='300 .38rem JetBrains Mono,monospace';
+  c2.fillStyle='rgba(255,255,255,.18)';
+  c2.fillText('what you could\'ve said',26,wStart);
+
+  // Purple left accent bar
+  c2.fillStyle='rgba(109,40,217,.35)';
+  c2.fillRect(26,wStart+10,2,56);
+
+  const wycs=(ai?.wycs||song.wycs||'').split('\n');
+  c2.font='italic 400 1.08rem Playfair Display,serif';
+  c2.fillStyle='rgba(255,255,255,.78)';
+  wycs.forEach((l,i)=>c2.fillText(l,34,wStart+28+i*26));
+
+  // Bottom divider
+  const by2=CH-96;
+  c2.strokeStyle='rgba(255,255,255,.06)'; c2.lineWidth=1;
+  c2.beginPath(); c2.moveTo(26,by2); c2.lineTo(CW-26,by2); c2.stroke();
+
+  // Song info
+  c2.font='400 .6rem JetBrains Mono,monospace';
+  c2.fillStyle='rgba(255,255,255,.28)';
+  c2.fillText('♪  '+song.title,26,by2+22);
+  c2.font='300 .48rem JetBrains Mono,monospace';
+  c2.fillStyle='rgba(255,255,255,.14)';
+  c2.fillText(song.artist,26,by2+40);
+
+  // Footer
+  c2.font='300 .38rem JetBrains Mono,monospace';
+  c2.fillStyle='rgba(255,255,255,.07)';
+  c2.fillText('freq. — tune into how you feel',26,CH-20);
+
+  // Small heart
+  c2.font='14px serif';
+  c2.fillStyle='rgba(196,167,255,.3)';
+  c2.fillText('♡',CW-38,CH-18);
 }
 
 document.getElementById('btn-save-card').addEventListener('click',()=>{drawCard();document.getElementById('save-modal').classList.add('show');});
-document.getElementById('save-dl').addEventListener('click',()=>{const a=document.createElement('a');a.download='freq-card.png';a.href=document.getElementById('save-canvas').toDataURL('image/png');a.click();showToast('card saved ✦');});
+document.getElementById('save-dl').addEventListener('click',()=>{
+  const a=document.createElement('a');
+  a.download='freq-card.png';
+  a.href=document.getElementById('save-canvas').toDataURL('image/png');
+  a.click();
+  showToast('card saved ✦');
+});
+document.getElementById('save-share-link').addEventListener('click',()=>{
+  share();
+  document.getElementById('save-modal').classList.remove('show');
+});
 document.getElementById('save-cancel').addEventListener('click',()=>document.getElementById('save-modal').classList.remove('show'));
 document.getElementById('save-modal').addEventListener('click',e=>{if(e.target===document.getElementById('save-modal'))document.getElementById('save-modal').classList.remove('show');});
 
@@ -1419,7 +1801,7 @@ document.getElementById('save-modal').addEventListener('click',e=>{if(e.target==
 function share(){
   if(!curResult)return;
   const{emo,song,ai}=curResult;
-  const d=btoa(encodeURIComponent(JSON.stringify({e:emo,s:song.title,a:song.artist,i:ai?.wycs||song.wycs})));
+  const d=btoa(encodeURIComponent(JSON.stringify({e:emo,s:song.title,a:song.artist,i:ai?.wycs||song.wycs,interp:ai?.interpretation||song.interp,hz:generateHz(song.title)})));
   const url=window.location.href.split('#')[0]+'#share='+d;
   navigator.clipboard?.writeText(url).then(()=>showToast('link copied — share it ✦')).catch(()=>showToast('copy the url ✦'));
 }
@@ -1429,28 +1811,60 @@ function checkShare(){
     const d=JSON.parse(decodeURIComponent(atob(window.location.hash.replace('#share=',''))));
     const ov=document.createElement('div');
     ov.style.cssText='position:fixed;inset:0;z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,3,12,.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:2rem;';
-    ov.innerHTML=`<div style="text-align:center;max-width:370px;"><div style="font-family:JetBrains Mono,monospace;font-size:.5rem;letter-spacing:.3em;color:rgba(255,255,255,.16);text-transform:uppercase;margin-bottom:1.7rem;">someone felt this about you</div><div style="font-family:Playfair Display,serif;font-size:1.45rem;font-style:italic;color:rgba(255,255,255,.78);line-height:1.78;margin-bottom:1.7rem;white-space:pre-line;">${d.i}</div><div style="font-family:JetBrains Mono,monospace;font-size:.56rem;letter-spacing:.13em;color:rgba(255,255,255,.2);margin-bottom:.28rem;">♪ ${d.s}</div><div style="font-family:JetBrains Mono,monospace;font-size:.5rem;letter-spacing:.1em;color:rgba(255,255,255,.13);margin-bottom:2.4rem;">${d.a}</div><button onclick="this.closest('[style]').remove();history.replaceState(null,'',location.pathname);" style="background:none;border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:.68rem 1.8rem;font-family:JetBrains Mono,monospace;font-size:.58rem;letter-spacing:.18em;color:rgba(255,255,255,.28);cursor:pointer;text-transform:lowercase;min-height:44px;">feel your own frequency →</button></div>`;
+    ov.innerHTML=`<div style="text-align:center;max-width:380px;background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:2rem 1.8rem;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(196,167,255,.4),transparent);"></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.28em;color:rgba(196,167,255,.45);text-transform:uppercase;margin-bottom:.4rem;">someone tuned into this for you</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.45rem;letter-spacing:.18em;color:rgba(255,255,255,.18);margin-bottom:1.6rem;">${d.hz||''}</div>
+      ${d.interp?`<div style="font-family:'Playfair Display',serif;font-size:.9rem;font-style:italic;color:rgba(255,255,255,.38);line-height:1.7;margin-bottom:1rem;white-space:pre-line;">${d.interp}</div>`:''}
+      <div style="font-family:'Playfair Display',serif;font-size:1.35rem;font-style:italic;color:rgba(255,255,255,.78);line-height:1.78;margin-bottom:1.6rem;white-space:pre-line;">${d.i}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.54rem;letter-spacing:.13em;color:rgba(255,255,255,.2);margin-bottom:.22rem;">♪ ${d.s}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.1em;color:rgba(255,255,255,.12);margin-bottom:2rem;">${d.a}</div>
+      <button onclick="this.closest('[style]').remove();history.replaceState(null,'',location.pathname);" style="background:linear-gradient(135deg,rgba(109,40,217,.32),rgba(67,56,202,.22));border:1px solid rgba(109,40,217,.32);border-radius:100px;padding:.72rem 2rem;font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.18em;color:rgba(255,255,255,.52);cursor:pointer;text-transform:lowercase;min-height:44px;transition:all .3s;">feel your own frequency →</button>
+    </div>`;
     document.body.appendChild(ov);
   }catch{}
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LIBRARY
+   FREQUENCIES LIBRARY
 ═══════════════════════════════════════════════════════════════ */
 function saveFreq(){
   if(!curResult)return;
-  const{emo,song,time}=curResult;
-  hist.unshift({id:Date.now(),input:curResult.input,emo,song:song.title,artist:song.artist,time,colors:song.colors,color:HIST_COLORS[Math.floor(Math.random()*HIST_COLORS.length)]});
+  const{emo,song,time,ai}=curResult;
+  hist.unshift({id:Date.now(),input:curResult.input,emo,song:song.title,artist:song.artist,time,colors:song.colors,color:HIST_COLORS[Math.floor(Math.random()*HIST_COLORS.length)],wycs:ai?.wycs||song.wycs,hz:generateHz(song.title)});
   if(hist.length>50)hist=hist.slice(0,50);
   ss(HK,hist);showToast('frequency kept ✦');
 }
 function getInsight(){
-  const now=Date.now(),w=now-7*24*60*60*1e3,d=now-24*60*60*1e3;
-  const tw=hist.filter(h=>h.time>w),td=hist.filter(h=>h.time>d);
+  const now=Date.now(),w=now-7*24*60*60*1e3,d2=now-24*60*60*1e3;
+  const tw=hist.filter(h=>h.time>w),td=hist.filter(h=>h.time>d2);
   if(td.length>=3)return`you've been here ${td.length} times today`;
   if(tw.length>=4){const e={};tw.forEach(h=>{e[h.emo]=(e[h.emo]||0)+1;});const top=Object.entries(e).sort((a,b)=>b[1]-a[1])[0];if(top&&top[1]>1)return`${(EMO_LABELS[top[0]]||top[0]).toLowerCase()} came up ${top[1]} times this week`;}
   return null;
 }
+
+function shareHistEntry(entry){
+  const d=btoa(encodeURIComponent(JSON.stringify({e:entry.emo,s:entry.song,a:entry.artist,i:entry.wycs||'',hz:entry.hz||''})));
+  const url=window.location.href.split('#')[0]+'#share='+d;
+  navigator.clipboard?.writeText(url).then(()=>showToast('link copied ✦')).catch(()=>showToast('copy the url ✦'));
+}
+
+function downloadHistCard(entry){
+  // Build a card for a history entry
+  const tmp={emo:entry.emo,song:{title:entry.song,artist:entry.artist,interp:'',wycs:entry.wycs||'',colors:entry.colors||['#111120','#1e1040','#2a1870']},ai:{interpretation:'',wycs:entry.wycs||''},time:entry.time};
+  const prev=curResult;
+  curResult=tmp;
+  drawCard();
+  setTimeout(()=>{
+    const a=document.createElement('a');
+    a.download=`freq-${entry.song.replace(/\s+/g,'-').toLowerCase()}.png`;
+    a.href=document.getElementById('save-canvas').toDataURL('image/png');
+    a.click();
+    curResult=prev;
+    showToast('card saved ✦');
+  },100);
+}
+
 function renderLib(){
   const ins=getInsight();const il=document.getElementById('lib-insight');
   if(ins){il.textContent=ins;il.style.display='block';}else il.style.display='none';
@@ -1462,21 +1876,49 @@ function renderLib(){
     const slot=SLOTS[e.song];
     const hasCover=!!(slot&&slot.cover);
     const label=new Date(e.time).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const emoLabel=(EMO_LABELS[e.emo]||e.emo||'').toLowerCase();
+    const atmo=EMO_ATMO[e.emo]||'';
     const rings=[80,65,50,35].map(r=>`<div class="cd-groove-ring" style="width:${r}%;height:${r}%;"></div>`).join('');
-    return`<div class="cd-card" style="animation-delay:${i*.04}s">
+    return`<div class="cd-card" style="animation-delay:${i*.04}s" data-idx="${i}">
       <div class="cd-case">
-        <div class="cd-disc" style="--c1:${c1};--c2:${c2}">
-          ${rings}
-          ${hasCover?`<img class="cd-cover-img" src="${slot.cover}" alt="" loading="lazy" onload="this.classList.add('loaded')"/>`:''  }
-          <div class="cd-hole"></div>
+        <div class="cd-spine">
+          <div class="cd-spine-text">${emoLabel}</div>
         </div>
+        <div class="cd-disc-wrap">
+          <div class="cd-disc" style="--c1:${c1};--c2:${c2}">
+            ${rings}
+            ${hasCover?`<img class="cd-cover-img" src="${slot.cover}" alt="" loading="lazy" onload="this.classList.add('loaded')"/>`:''}
+            <div class="cd-hole"></div>
+          </div>
+        </div>
+        <div class="cd-hover-info">
+          <div class="cd-hover-emo">${emoLabel}</div>
+          <div class="cd-hover-atmo">${atmo}</div>
+        </div>
+        <div class="cd-case::after"></div>
       </div>
       <div class="cd-meta">
         <div class="cd-name">${e.song}</div>
-        <div class="cd-emotion-label">${(EMO_LABELS[e.emo]||e.emo||'').toLowerCase()} · ${label}</div>
+        <div class="cd-emotion-label">${emoLabel} · ${label}</div>
+      </div>
+      <div class="cd-card-actions">
+        <button class="cd-action-btn" data-action="share" data-idx="${i}">share</button>
+        <button class="cd-action-btn" data-action="dl" data-idx="${i}">save card</button>
       </div>
     </div>`;
   }).join('');
+
+  // Attach card action events
+  list.querySelectorAll('.cd-action-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const idx=parseInt(btn.dataset.idx);
+      const entry=hist[idx];
+      if(!entry)return;
+      if(btn.dataset.action==='share')shareHistEntry(entry);
+      else if(btn.dataset.action==='dl')downloadHistCard(entry);
+    });
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1533,8 +1975,11 @@ if(!isMobile){
 ═══════════════════════════════════════════════════════════════ */
 // Login
 document.getElementById('login-btn').addEventListener('click',()=>{
-  const n=document.getElementById('login-name').value.trim();if(n)sn(n);
-  ss(VK,gv()+1);ss(LVK,Date.now());buildReturnMsg();initLanding();
+  const n=document.getElementById('login-name').value.trim();
+  if(n)sn(n);
+  ss(VK,gv()+1);ss(LVK,Date.now());buildReturnMsg();
+  if(n)setTimeout(showWelcomePill,800);
+  initLanding();
 });
 document.getElementById('login-skip').addEventListener('click',()=>{ss(VK,gv()+1);ss(LVK,Date.now());buildReturnMsg();initLanding();});
 document.getElementById('login-name').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-btn').click();});
@@ -1561,8 +2006,11 @@ document.getElementById('btn-play').addEventListener('click',togglePlay);
 document.getElementById('btn-next').addEventListener('click',()=>{
   if(!curResult)return;
   if(playing)audio.pause();
-  const s=getBestSong(curResult.emo);
-  showResult(curResult.emo,s,curResult.input,curResult.eData);
+  armLift();
+  setTimeout(()=>{
+    const s=getBestSong(curResult.emo);
+    showResult(curResult.emo,s,curResult.input,curResult.eData);
+  },600);
 });
 document.getElementById('btn-prev').addEventListener('click',()=>{
   if(audio.currentTime>3)audio.currentTime=0;
@@ -1575,8 +2023,11 @@ document.getElementById('btn-save-freq').addEventListener('click',saveFreq);
 document.getElementById('btn-again').addEventListener('click',()=>{
   if(!curResult)return;
   if(playing)audio.pause();
-  const s=getBestSong(curResult.emo);
-  showResult(curResult.emo,s,curResult.input,curResult.eData);
+  armLift();
+  setTimeout(()=>{
+    const s=getBestSong(curResult.emo);
+    showResult(curResult.emo,s,curResult.input,curResult.eData);
+  },600);
 });
 document.getElementById('btn-share').addEventListener('click',share);
 
@@ -1604,10 +2055,10 @@ function checkLateNight(){
   const h=new Date().getHours();
   if(h>=23||h<4){bgT1=248;bgT2=228;const b=document.createElement('div');b.className='late-banner';b.textContent='you\'re still awake…';document.body.appendChild(b);setTimeout(()=>b.remove(),5500);}
 }
-function initLanding(){showScreen('s-land');checkLateNight();}
+function initLanding(){showScreen('s-land');checkLateNight();if(gn())setTimeout(showWelcomePill,600);}
 
 /* ═══════════════════════════════════════════════════════════════
-   CINEMATIC INTRO
+   CINEMATIC INTRO (unchanged from original)
 ═══════════════════════════════════════════════════════════════ */
 (function runIntro(){
   const ic2=document.getElementById('intro-canvas');if(!ic2)return;
